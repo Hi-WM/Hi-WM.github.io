@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>World Model Demo (Concurrent)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f0f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Top bar ── */
+    #topbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 28px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      flex-shrink: 0;
+    }
+
+    #topbar label {
+      font-size: 15px;
+      font-weight: 600;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    #taskSelect {
+      font-size: 15px;
+      padding: 7px 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .sep { width: 1px; height: 30px; background: #ddd; margin: 0 4px; }
+
+    .btn {
+      font-size: 15px;
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 500;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary { background: #3b82f6; color: #fff; }
+    .btn-outline  { background: #fff; color: #3b82f6; border: 1.5px solid #3b82f6; }
+    .btn-gray     { background: #e5e7eb; color: #374151; }
+
+    #status-wrap {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      color: #555;
+    }
+
+    #status-dot {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: #ef4444;
+      flex-shrink: 0;
+    }
+    #status-dot.connected { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+
+    #latency-wrap { font-size: 14px; color: #888; margin-left: 20px; }
+    #latency-wrap span { color: #333; font-weight: 600; }
+
+    /* ── Main layout ── */
+    #main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      padding: 20px;
+      min-height: 0;
+    }
+
+    /* ── Arm panels ── */
+    .arm-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .arm-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #666;
+    }
+
+    .key-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 48px);
+      gap: 6px;
+    }
+
+    .key {
+      width: 48px; height: 48px;
+      background: #fff;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: #374151;
+      box-shadow: 0 3px 0 #c0c0c0;
+      transition: background 0.08s, box-shadow 0.08s, transform 0.08s, opacity 0.15s;
+      user-select: none;
+    }
+
+    /* Dimmed = not used by current task */
+    .key.dim {
+      background: #f3f4f6;
+      border-color: #e5e7eb;
+      color: #d1d5db;
+      box-shadow: 0 3px 0 #e0e0e0;
+    }
+
+    /* Pressed */
+    .key.pressed {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #2563eb;
+      box-shadow: 0 1px 0 #1d4ed8;
+      transform: translateY(2px);
+    }
+
+    .arm-hint {
+      font-size: 11px;
+      color: #9ca3af;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* ── Canvas wrap ── */
+    #canvas-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    #view {
+      display: block;
+      border-radius: 6px;
+      border: 2px solid #ef4444;
+      background: #111;
+      width: min(60vw, 60vh);
+      height: min(60vw, 60vh);
+      image-rendering: pixelated;
+    }
+
+    #view.connected { border-color: #22c55e; }
+
+    /* Overlay shown before first frame */
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    #overlay.hidden { display: none; }
+
+    #overlay-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 1px 4px #0008;
+      letter-spacing: 1px;
+    }
+
+    #overlay-sub {
+      font-size: 13px;
+      color: rgba(255,255,255,0.75);
+      text-shadow: 0 1px 3px #0008;
+    }
+
+    #overlay-hint {
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      margin-top: 4px;
+      text-align: center;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Top bar ── -->
+<div id="topbar">
+  <label>YAM Push-T</label>
+
+  <div class="sep"></div>
+
+  <button class="btn btn-primary" id="btnConnect">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    Connect
+  </button>
+
+  <button class="btn btn-gray" id="btnReset" disabled>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+    Reset
+  </button>
+
+  <div id="status-wrap">
+    <div id="status-dot"></div>
+    <span id="status-text">Disconnected</span>
+  </div>
+
+  <div id="latency-wrap">LATENCY <span id="latency">—</span> ms</div>
+</div>
+
+<!-- ── Main ── -->
+<div id="main">
+
+  <!-- Left arm keys: Q W E / A S D -->
+  <div class="arm-panel">
+    <div class="arm-label">Left Arm</div>
+    <div class="key-grid">
+      <div class="key" id="kQ">Q</div>
+      <div class="key" id="kW">W</div>
+      <div class="key" id="kE">E</div>
+      <div class="key" id="kA">A</div>
+      <div class="key" id="kS">S</div>
+      <div class="key" id="kD">D</div>
+    </div>
+    <div class="arm-hint" id="hintLeft"></div>
+  </div>
+
+  <!-- Canvas -->
+  <div id="canvas-wrap">
+    <canvas id="view" width="512" height="512"></canvas>
+    <div id="overlay">
+      <div id="overlay-title">PUSHT (TOP-DOWN)</div>
+      <div id="overlay-sub">Click Connect to start</div>
+      <div id="overlay-hint">AD: X-axis, WS: Y-axis &nbsp;|&nbsp; JL: X-axis, IK: Y-axis</div>
+    </div>
+  </div>
+
+  <!-- Right arm keys: U I O / J K L -->
+  <div class="arm-panel">
+    <div class="arm-label">Right Arm</div>
+    <div class="key-grid">
+      <div class="key" id="kU">U</div>
+      <div class="key" id="kI">I</div>
+      <div class="key" id="kO">O</div>
+      <div class="key" id="kJ">J</div>
+      <div class="key" id="kK">K</div>
+      <div class="key" id="kL">L</div>
+    </div>
+    <div class="arm-hint" id="hintRight"></div>
+  </div>
+
+</div>
+
+<script>
+  const TASK = 'yam_push_t_xy';
+  const META = {
+    title:     "YAM PUSH-T XY",
+    leftKeys:  ['w','a','s','d'],
+    rightKeys: ['i','j','k','l'],
+    hintLeft:  "AD: X  WS: Y",
+    hintRight: "JL: X  IK: Y",
+    hint:      "WASD: left XY | IJKL: right XY",
+  };
+
+  // ── DOM refs ──
+  const canvas       = document.getElementById('view');
+  const ctx          = canvas.getContext('2d');
+  const overlay      = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlaySub   = document.getElementById('overlay-sub');
+  const overlayHint  = document.getElementById('overlay-hint');
+  const statusDot    = document.getElementById('status-dot');
+  const statusText   = document.getElementById('status-text');
+  const latencyEl    = document.getElementById('latency');
+  const btnConnect   = document.getElementById('btnConnect');
+  const btnReset     = document.getElementById('btnReset');
+  const hintLeft     = document.getElementById('hintLeft');
+  const hintRight    = document.getElementById('hintRight');
+
+  let ws = null;
+  let hasFrame = false;
+  let lastSendMs = 0;
+
+  // ── Key setup ──
+  const ALL_KEYS = ['q','w','e','a','s','d','u','i','o','j','k','l'];
+  const KEY_ELS = {};
+  ALL_KEYS.forEach(k => { KEY_ELS[k] = document.getElementById('k' + k.toUpperCase()); });
+
+  const KEY_MAP = {
+    KeyQ:'q', KeyW:'w', KeyE:'e', KeyA:'a', KeyS:'s', KeyD:'d',
+    KeyU:'u', KeyI:'i', KeyO:'o', KeyJ:'j', KeyK:'k', KeyL:'l',
+  };
+  const keyState = {};
+
+  // Dim keys not used by this task
+  const activeKeys = new Set([...META.leftKeys, ...META.rightKeys]);
+  ALL_KEYS.forEach(k => {
+    if (!activeKeys.has(k) && KEY_ELS[k]) KEY_ELS[k].classList.add('dim');
+  });
+  hintLeft.textContent  = META.hintLeft;
+  hintRight.textContent = META.hintRight;
+  overlayTitle.textContent = META.title;
+  overlayHint.textContent  = META.hint;
+
+  window.addEventListener('keydown', e => {
+    const k = KEY_MAP[e.code];
+    if (!k) return;
+    e.preventDefault();
+    keyState[k] = 1;
+    if (KEY_ELS[k]) KEY_ELS[k].classList.add('pressed');
+  });
+  window.addEventListener('keyup', e => {
+    const k = KEY_MAP[e.code];
+    if (!k) return;
+    e.preventDefault();
+    keyState[k] = 0;
+    if (KEY_ELS[k]) KEY_ELS[k].classList.remove('pressed');
+  });
+
+  // ── UI helpers ──
+  function setStatus(connected) {
+    statusDot.className    = connected ? 'connected' : '';
+    statusText.textContent = connected ? 'Connected' : 'Disconnected';
+    canvas.className       = connected ? 'connected' : '';
+    btnReset.disabled      = !connected;
+  }
+
+  // ── WebSocket ──
+  function connect(url) {
+    if (ws) { ws.close(); ws = null; }
+    overlaySub.textContent = 'Connecting…';
+    ws = new WebSocket(url);
+    ws.binaryType = 'arraybuffer';
+
+    ws.onopen = () => {
+      setStatus(true);
+      hasFrame = false;
+      overlaySub.textContent = 'Press keys to start';
+      send({ type: 'init', task: TASK });
+    };
+
+    ws.onmessage = async event => {
+      if (lastSendMs > 0) {
+        latencyEl.textContent = String(Date.now() - lastSendMs);
+      }
+      try {
+        const imgData = event.data.slice(8);
+        const blob   = new Blob([imgData], { type: 'image/png' });
+        const bitmap = await createImageBitmap(blob);
+        ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        if (!hasFrame) { hasFrame = true; overlay.classList.add('hidden'); }
+      } catch (_) {}
+    };
+
+    ws.onerror = () => {
+      setStatus(false);
+      overlaySub.textContent = 'Connection error. Try again.';
+    };
+
+    ws.onclose = event => {
+      setStatus(false);
+      if (!hasFrame) {
+        overlaySub.textContent = event.reason || 'Disconnected. Click Connect to retry.';
+      }
+    };
+  }
+
+  function send(msg) {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+  }
+
+  function buildDefaultWsUrl() {
+    return 'wss://hi-worldmodel.ngrok.dev/ws';
+  }
+
+  btnConnect.addEventListener('click', () => {
+    connect(buildDefaultWsUrl());
+  });
+
+  btnReset.addEventListener('click', () => {
+    hasFrame = false;
+    overlay.classList.remove('hidden');
+    overlaySub.textContent = 'Press keys to start';
+    send({ type: 'set_task', task: TASK });
+  });
+
+  // ── Input loop (20 Hz) ──
+  let lastActionJson = null;
+  setInterval(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const action = {};
+    for (const k of ['w','a','s','d','q','e','i','j','k','l','u','o'])
+      action[k] = keyState[k] || 0;
+    const msg = JSON.stringify({ type: 'action', action, t_client: performance.now() });
+    if (msg !== lastActionJson) {
+      lastSendMs = Date.now();
+      ws.send(msg);
+      lastActionJson = msg;
+    }
+  }, 50);
+</script>
+</body>
+</html>
