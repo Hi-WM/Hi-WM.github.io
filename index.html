@@ -117,7 +117,7 @@
 
     .publication-title {
       font-family: "Castoro", serif;
-      font-size: clamp(2.35rem, 5vw, 4.2rem);
+      font-size: clamp(1.5rem, 3vw, 3rem);
       line-height: 1.08;
       max-width: 32ch;
       margin: 0 auto 1rem;
@@ -158,7 +158,7 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: 0.85rem;
-      margin-top: 1.6rem;
+      margin: 1.6rem;
     }
 
     .hero-teaser {
@@ -217,7 +217,7 @@
 
     .section-head p {
       max-width: 860px;
-      margin: 0 auto;
+      margin:  auto;
       color: var(--ink-soft);
     }
 
@@ -281,6 +281,9 @@
       background: rgba(255, 255, 255, 0.62);
     }
 
+    .demo-toolbar-actions button {
+      margin-bottom: 1.5rem;  /* 增加按钮底部的间距 */
+    }
     .demo-toolbar-main {
       display: flex;
       align-items: center;
@@ -538,7 +541,8 @@
 
     .demo-footnote {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      /*grid-template-columns: repeat(2, minmax(0, 1fr));*/
+      grid-template-columns: 1fr;
       gap: 0.85rem;
     }
 
@@ -655,7 +659,7 @@
     <section class="hero">
       <div class="container narrow">
         <div class="hero-card">
-          <div class="eyebrow">Project Page</div>
+<!--          <div class="eyebrow">Project Page</div>-->
           <h1 class="publication-title">Hi-WM: Human-in-the-World-Model for Scalable Robot Post-Training</h1>
 <!--          <p class="publication-subtitle">-->
 <!--            Hi-WM uses a learned world model as a reusable corrective substrate for failure-targeted policy improvement in robot post-training.-->
@@ -683,12 +687,28 @@
 <!--              Hi-WM overview. A policy is rolled out in a learned world model. When the rollout becomes failure-prone, a human provides short corrective actions. Cached states support rollback and branching, producing multiple continuations for post-training.-->
 <!--            </figcaption>-->
 <!--          </figure>-->
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <img src="hiwm.png" alt="Hi-WM overview figure" style="width: 80%; display: block;">
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 1rem">
+            <img src="hiwm.png" alt="Hi-WM overview figure" style="width: 100%; display: block;">
             <p style="text-align: left;">
               Hi-WM overview. A policy is rolled out in a learned world model. When the rollout becomes failure-prone, a human provides short corrective actions. Cached states support rollback and branching, producing multiple continuations for post-training.
             </p>
           </div>
+
+
+
+<!--          <div class="section-head">-->
+<!--            <h2>Abstract</h2>-->
+<!--&lt;!&ndash;            <p>Human-in-the-World-Model for scalable robot post-training.</p>&ndash;&gt;-->
+<!--          </div>-->
+
+<!--          <div class="paper-card abstract-text">-->
+<!--            <p>-->
+<!--              Post-training is essential for turning pretrained generalist robot policies into reliable task-specific controllers, but existing human-in-the-loop pipelines remain tied to physical execution: each correction requires robot time, scene setup, resets, and operator supervision in the real world. Meanwhile, action-conditioned world models have been studied mainly for imagination, synthetic data generation, and policy evaluation. We propose <span class="placeholder">Human-in-the-World-Model (Hi-WM)</span>, a post-training framework that uses a learned world model as a reusable corrective substrate for failure-targeted policy improvement. A policy is first rolled out in closed loop inside the world model; when the rollout becomes incorrect or failure-prone, a human intervenes directly in the model to provide short corrective actions.-->
+<!--            </p>-->
+<!--            <p>-->
+<!--              Hi-WM caches intermediate states and supports rollback and branching, allowing a single failure state to be reused for multiple corrective continuations and yielding dense supervision around behaviors that the base policy handles poorly. The resulting corrective trajectories are then added back to the training set for post-training. We evaluate Hi-WM on three real-world manipulation tasks spanning both rigid and deformable object interaction, and on two policy backbones. Hi-WM improves real-world success by 37.9 points on average over the base policy and by 19.0 points over a world-model closed-loop baseline, while world-model evaluation correlates strongly with real-world performance (r = 0.953). These results suggest that world models can serve not only as generators or evaluators, but also as effective corrective substrates for scalable robot post-training.-->
+<!--            </p>-->
+<!--          </div>-->
         </div>
       </div>
     </section>
@@ -697,7 +717,7 @@
       <div class="container narrow">
         <div class="section-head">
           <h2>Abstract</h2>
-          <p>Human-in-the-World-Model for scalable robot post-training.</p>
+<!--          <p>Human-in-the-World-Model for scalable robot post-training.</p>-->
         </div>
         <div class="paper-card abstract-text">
           <p>
@@ -782,10 +802,10 @@
                   <strong>Controls</strong>
                   <p>Use keyboard input after the websocket connection is established. The highlighted keys reflect the current control state.</p>
                 </div>
-                <div class="demo-footnote-card">
-                  <strong>Embed-Friendly Layout</strong>
-                  <p>This section is sized for a paper page, so you can keep title, abstract, figures, and BibTeX in the same site without a separate demo entry point.</p>
-                </div>
+<!--                <div class="demo-footnote-card">-->
+<!--                  <strong>Embed-Friendly Layout</strong>-->
+<!--                  <p>This section is sized for a paper page, so you can keep title, abstract, figures, and BibTeX in the same site without a separate demo entry point.</p>-->
+<!--                </div>-->
               </div>
             </section>
 
