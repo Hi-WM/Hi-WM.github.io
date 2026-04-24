@@ -2,182 +2,502 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>World Model Demo (Concurrent)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Hi-WM uses a learned world model as a reusable corrective substrate for failure-targeted robot policy post-training." />
+  <title>Hi-WM: Human-in-the-World-Model for Scalable Robot Post-Training</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Castoro:ital@0;1&family=Noto+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f6f5f1;
+      --bg-muted: #ece9df;
+      --surface: rgba(255, 255, 255, 0.88);
+      --surface-strong: #ffffff;
+      --ink: #15221b;
+      --ink-soft: #56635c;
+      --accent: #1d6f5f;
+      --accent-strong: #114d42;
+      --line: rgba(21, 34, 27, 0.1);
+      --shadow: 0 24px 60px rgba(21, 34, 27, 0.08);
+      --demo-bg: #f8f6ef;
+      --demo-panel: rgba(255, 255, 255, 0.82);
+      --demo-panel-border: rgba(21, 34, 27, 0.08);
+      --demo-text: #15221b;
+      --demo-text-soft: rgba(21, 34, 27, 0.62);
+      --status-off: #ef4444;
+      --status-on: #22c55e;
+      --key-shadow: #cfd4dc;
+      --key-active: #2c7be5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f0f0f0;
-      height: 100vh;
+      min-height: 100vh;
+      font-family: "Noto Sans", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(29, 111, 95, 0.12), transparent 32%),
+        radial-gradient(circle at top right, rgba(194, 148, 55, 0.1), transparent 28%),
+        linear-gradient(180deg, #fbfaf6 0%, var(--bg) 100%);
+      line-height: 1.7;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    main {
+      padding-bottom: 4rem;
+    }
+
+    .container {
+      /*width: min(1360px, calc(100% - 2rem));*/
+      width: calc(70% - 2rem);
+      margin: 0 auto;
+    }
+
+    .container.narrow {
+      /*width: min(1120px, calc(100% - 2rem));*/
+      width: calc(70% - 2rem);
+    }
+
+    .section {
+      padding: 2.5rem 0;
+    }
+
+    .section-muted {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(236, 233, 223, 0.75));
+      border-top: 1px solid rgba(255, 255, 255, 0.5);
+      border-bottom: 1px solid rgba(21, 34, 27, 0.04);
+    }
+
+    .hero {
+      padding: 4.5rem 0 2rem;
+    }
+
+    .hero-card,
+    .paper-card {
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-card {
+      padding: clamp(2rem, 4vw, 3rem);
+      text-align: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.45rem 0.8rem;
+      border-radius: 999px;
+      background: rgba(29, 111, 95, 0.1);
+      color: var(--accent-strong);
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1.1rem;
+    }
+
+    .publication-title {
+      font-family: "Castoro", serif;
+      font-size: clamp(2.35rem, 5vw, 4.2rem);
+      line-height: 1.08;
+      max-width: 32ch;
+      margin: 0 auto 1rem;
+    }
+
+    .publication-subtitle {
+      max-width: 880px;
+      margin: 0 auto 1.5rem;
+      font-size: 1.05rem;
+      color: var(--ink-soft);
+    }
+
+    .publication-authors,
+    .publication-affiliations,
+    .publication-note {
+      max-width: 980px;
+      margin: 0 auto;
+      color: var(--ink-soft);
+    }
+
+    .publication-authors {
+      font-size: 1.04rem;
+      font-weight: 600;
+    }
+
+    .publication-affiliations {
+      margin-top: 0.6rem;
+      font-size: 0.98rem;
+    }
+
+    .publication-note {
+      margin-top: 0.75rem;
+      font-size: 0.95rem;
+    }
+
+    .publication-links {
       display: flex;
-      flex-direction: column;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.85rem;
+      margin-top: 1.6rem;
+    }
+
+    .hero-teaser {
+      margin-top: 2rem;
+      padding: 1rem;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(21, 34, 27, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+    }
+
+    .hero-teaser img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 16px;
+    }
+
+    .hero-teaser figcaption {
+      margin-top: 0.85rem;
+      font-size: 0.95rem;
+      color: var(--ink-soft);
+      text-align: left;
+    }
+
+    .link-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      min-width: 128px;
+      padding: 0.8rem 1.15rem;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #fff;
+      font-weight: 700;
+      transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s ease;
+    }
+
+    .link-pill:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .section-head {
+      text-align: center;
+      margin-bottom: 1.4rem;
+    }
+
+    .section-head h2 {
+      font-family: "Castoro", serif;
+      font-size: clamp(1.9rem, 3vw, 2.6rem);
+      line-height: 1.15;
+      margin-bottom: 0.6rem;
+    }
+
+    .section-head p {
+      max-width: 860px;
+      margin: 0 auto;
+      color: var(--ink-soft);
+    }
+
+    .paper-card {
+      padding: clamp(1.4rem, 2vw, 1.9rem);
+    }
+
+    .abstract-text p + p {
+      margin-top: 1rem;
+    }
+
+    .abstract-text .placeholder {
+      color: var(--accent-strong);
+      font-weight: 700;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin-top: 1.2rem;
+    }
+
+    .info-card h3 {
+      font-size: 1rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .info-card p,
+    .info-card li {
+      color: var(--ink-soft);
+    }
+
+    .info-card ul {
+      list-style: none;
+    }
+
+    .info-card li + li {
+      margin-top: 0.55rem;
+    }
+
+    .demo-shell {
+      background:
+        radial-gradient(circle at top right, rgba(44, 123, 229, 0.12), transparent 26%),
+        linear-gradient(180deg, #ffffff 0%, var(--demo-bg) 100%);
+      border-radius: 30px;
+      border: 1px solid rgba(21, 34, 27, 0.08);
+      box-shadow: 0 28px 70px rgba(21, 34, 27, 0.1);
+      color: var(--demo-text);
       overflow: hidden;
     }
 
-    /* ── Top bar ── */
-    #topbar {
+    .demo-toolbar {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 14px;
-      padding: 14px 28px;
-      background: #fff;
-      border-bottom: 1px solid #ddd;
-      flex-shrink: 0;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.2rem 1.3rem;
+      border-bottom: 1px solid var(--demo-panel-border);
+      background: rgba(255, 255, 255, 0.62);
     }
 
-    #topbar label {
-      font-size: 15px;
-      font-weight: 600;
-      color: #555;
+    .demo-toolbar-main {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+    }
+
+    .demo-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(29, 111, 95, 0.08);
+      border: 1px solid var(--demo-panel-border);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      color: var(--accent-strong);
     }
 
-    #taskSelect {
-      font-size: 15px;
-      padding: 7px 12px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      background: #fff;
-      outline: none;
-      cursor: pointer;
+    .demo-title {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
     }
 
-    .sep { width: 1px; height: 30px; background: #ddd; margin: 0 4px; }
+    .demo-title strong {
+      font-size: 1.05rem;
+      letter-spacing: 0.01em;
+    }
 
-    .btn {
-      font-size: 15px;
-      padding: 8px 20px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
+    .demo-title span {
+      color: var(--demo-text-soft);
+      font-size: 0.92rem;
+    }
+
+    .demo-toolbar-actions {
       display: flex;
       align-items: center;
-      gap: 7px;
-      font-weight: 500;
-      transition: opacity 0.15s;
+      gap: 0.75rem;
+      flex-wrap: wrap;
     }
-    .btn:hover { opacity: 0.85; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .btn-primary { background: #3b82f6; color: #fff; }
-    .btn-outline  { background: #fff; color: #3b82f6; border: 1.5px solid #3b82f6; }
-    .btn-gray     { background: #e5e7eb; color: #374151; }
-
-    #status-wrap {
-      margin-left: auto;
-      display: flex;
+    .status-wrap,
+    .latency-wrap {
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
-      font-size: 15px;
-      color: #555;
+      gap: 0.55rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid var(--demo-panel-border);
+      font-size: 0.92rem;
     }
 
     #status-dot {
-      width: 11px; height: 11px;
-      border-radius: 50%;
-      background: #ef4444;
-      flex-shrink: 0;
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 999px;
+      background: var(--status-off);
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
+      transition: background 0.2s ease, box-shadow 0.2s ease;
     }
-    #status-dot.connected { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
 
-    #latency-wrap { font-size: 14px; color: #888; margin-left: 20px; }
-    #latency-wrap span { color: #333; font-weight: 600; }
+    #status-dot.connected {
+      background: var(--status-on);
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+    }
 
-    /* ── Main layout ── */
-    #main {
-      flex: 1;
-      display: flex;
+    .latency-wrap span,
+    .status-wrap span:last-child {
+      font-weight: 700;
+    }
+
+    .btn {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 28px;
-      padding: 20px;
-      min-height: 0;
+      gap: 0.55rem;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.8rem 1.1rem;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.16s ease, opacity 0.16s ease, background 0.16s ease;
     }
 
-    /* ── Arm panels ── */
+    .btn:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      color: #fff;
+      background: linear-gradient(135deg, #2c7be5 0%, #2155c2 100%);
+    }
+
+    .btn-gray {
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(21, 34, 27, 0.1);
+    }
+
+    .demo-body {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr) 240px;
+      gap: 1rem;
+      align-items: stretch;
+      padding: 1.2rem;
+    }
+
+    .arm-panel,
+    .viewport-panel {
+      background: var(--demo-panel);
+      border: 1px solid var(--demo-panel-border);
+      border-radius: 24px;
+    }
+
     .arm-panel {
       display: flex;
       flex-direction: column;
+      justify-content: center;
       align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
+      gap: 1rem;
+      padding: 1.2rem;
     }
 
     .arm-label {
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 1px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: 0.11em;
       text-transform: uppercase;
-      color: #666;
+      color: var(--accent-strong);
     }
 
     .key-grid {
       display: grid;
-      grid-template-columns: repeat(3, 48px);
-      gap: 6px;
+      grid-template-columns: repeat(3, 52px);
+      gap: 0.45rem;
     }
 
     .key {
-      width: 48px; height: 48px;
+      width: 52px;
+      height: 52px;
       background: #fff;
-      border: 1.5px solid #d1d5db;
-      border-radius: 8px;
+      border: 1.5px solid #dbe2ea;
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
-      font-weight: 700;
-      color: #374151;
-      box-shadow: 0 3px 0 #c0c0c0;
-      transition: background 0.08s, box-shadow 0.08s, transform 0.08s, opacity 0.15s;
+      color: #334155;
+      font-size: 1rem;
+      font-weight: 800;
+      box-shadow: 0 4px 0 var(--key-shadow);
+      transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease, opacity 0.12s ease;
       user-select: none;
     }
 
-    /* Dimmed = not used by current task */
     .key.dim {
-      background: #f3f4f6;
-      border-color: #e5e7eb;
-      color: #d1d5db;
-      box-shadow: 0 3px 0 #e0e0e0;
+      background: #e5e7eb;
+      border-color: #d1d5db;
+      color: #9ca3af;
+      box-shadow: 0 4px 0 #c7cbd1;
     }
 
-    /* Pressed */
     .key.pressed {
-      background: #3b82f6;
       color: #fff;
-      border-color: #2563eb;
-      box-shadow: 0 1px 0 #1d4ed8;
+      background: var(--key-active);
+      border-color: #1d4ed8;
+      box-shadow: 0 2px 0 #1e40af;
       transform: translateY(2px);
     }
 
     .arm-hint {
-      font-size: 11px;
-      color: #9ca3af;
       text-align: center;
-      line-height: 1.6;
+      color: var(--demo-text-soft);
+      font-size: 0.85rem;
+      line-height: 1.7;
     }
 
-    /* ── Canvas wrap ── */
+    .viewport-panel {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
     #canvas-wrap {
       position: relative;
-      flex-shrink: 0;
+      width: min(100%, 820px);
+      margin: 0 auto;
+      aspect-ratio: 1 / 1;
+      border-radius: 22px;
+      overflow: hidden;
+      background: #05070d;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
     }
 
     #view {
+      width: 100%;
+      height: 100%;
       display: block;
-      border-radius: 6px;
-      border: 2px solid #ef4444;
       background: #111;
-      width: min(60vw, 60vh);
-      height: min(60vw, 60vh);
+      border: 0;
       image-rendering: pixelated;
     }
 
-    #view.connected { border-color: #22c55e; }
-
-    /* Overlay shown before first frame */
     #overlay {
       position: absolute;
       inset: 0;
@@ -185,252 +505,577 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      border-radius: 4px;
+      gap: 0.65rem;
+      padding: 1.5rem;
+      text-align: center;
+      background:
+        linear-gradient(180deg, rgba(17, 24, 39, 0.44), rgba(17, 24, 39, 0.7)),
+        radial-gradient(circle at center, rgba(44, 123, 229, 0.2), transparent 46%);
       pointer-events: none;
     }
 
-    #overlay.hidden { display: none; }
+    #overlay.hidden {
+      display: none;
+    }
 
     #overlay-title {
-      font-size: 22px;
-      font-weight: 700;
-      color: #fff;
-      text-shadow: 0 1px 4px #0008;
-      letter-spacing: 1px;
+      font-size: clamp(1.2rem, 3vw, 1.7rem);
+      font-weight: 800;
+      letter-spacing: 0.08em;
     }
 
     #overlay-sub {
-      font-size: 13px;
-      color: rgba(255,255,255,0.75);
-      text-shadow: 0 1px 3px #0008;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 0.98rem;
     }
 
     #overlay-hint {
-      font-size: 11px;
-      color: rgba(255,255,255,0.5);
-      margin-top: 4px;
-      text-align: center;
+      color: rgba(255, 255, 255, 0.56);
+      font-size: 0.8rem;
+      line-height: 1.8;
+      max-width: 34ch;
+    }
+
+    .demo-footnote {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+
+    .demo-footnote-card {
+      padding: 0.9rem 1rem;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--demo-panel-border);
+      border-radius: 18px;
+    }
+
+    .demo-footnote-card strong {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-size: 0.92rem;
+    }
+
+    .demo-footnote-card p {
+      color: var(--demo-text-soft);
+      font-size: 0.88rem;
+      line-height: 1.65;
+    }
+
+    pre {
+      overflow-x: auto;
+      padding: 1rem 1.1rem;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fffdf8 0%, #f2eee3 100%);
+      border: 1px solid rgba(21, 34, 27, 0.08);
+      color: var(--ink);
+      font-size: 0.92rem;
       line-height: 1.6;
+    }
+
+    footer {
+      padding: 0 0 2.8rem;
+    }
+
+    .footer-card {
+      padding: 1.2rem 1.3rem;
+      text-align: center;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 1080px) {
+      .demo-body {
+        grid-template-columns: 1fr;
+      }
+
+      .viewport-panel {
+        order: -1;
+      }
+
+      .arm-panel {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .arm-panel .arm-hint {
+        max-width: 22ch;
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .hero {
+        padding-top: 3rem;
+      }
+
+      .section {
+        padding: 2rem 0;
+      }
+
+      .hero-card,
+      .paper-card {
+        border-radius: 22px;
+      }
+
+      .info-grid,
+      .demo-footnote {
+        grid-template-columns: 1fr;
+      }
+
+      .demo-toolbar {
+        padding: 1rem;
+      }
+
+      .demo-body {
+        padding: 1rem;
+      }
+
+      .arm-panel {
+        flex-direction: column;
+      }
+
+      .arm-panel .arm-hint {
+        text-align: center;
+      }
+
+      .key-grid {
+        grid-template-columns: repeat(3, 48px);
+      }
+
+      .key {
+        width: 48px;
+        height: 48px;
+      }
     }
   </style>
 </head>
 <body>
+  <main>
+    <section class="hero">
+      <div class="container narrow">
+        <div class="hero-card">
+          <div class="eyebrow">Project Page</div>
+          <h1 class="publication-title">Hi-WM: Human-in-the-World-Model for Scalable Robot Post-Training</h1>
+<!--          <p class="publication-subtitle">-->
+<!--            Hi-WM uses a learned world model as a reusable corrective substrate for failure-targeted policy improvement in robot post-training.-->
+<!--          </p>-->
+          <div class="publication-authors">
+            Yaxuan Li<sup>1,*</sup> &nbsp; Zhongyi Zhou<sup>1,*</sup> &nbsp; Yefei Chen<sup>1,*</sup> &nbsp; Yanjiang Guo<sup>2</sup><br />
+            Jiaming Liu<sup>3</sup> &nbsp; Shanghang Zhang<sup>3</sup> &nbsp; Jianyu Chen<sup>2</sup> &nbsp; Yichen Zhu<sup>4</sup>
+          </div>
+          <div class="publication-affiliations">
+            <span>1. Current Robotics</span> &nbsp; | &nbsp;
+            <span>2. Tsinghua University</span> &nbsp; | &nbsp;
+            <span>3. Peking University</span> &nbsp; | &nbsp;
+            <span>4. University of Toronto</span>
+          </div>
+          <div class="publication-note">
+            <sup>*</sup>Equal contribution
+          </div>
+          <div class="publication-links">
+            <a class="link-pill" href="https://arxiv.org/pdf/2604.21741" target="_blank" rel="noopener noreferrer">Paper</a>
+            <a class="link-pill" href="http://arxiv.org/abs/2604.21741" target="_blank" rel="noopener noreferrer">arXiv</a>
+          </div>
+<!--          <figure class="hero-teaser">-->
+<!--            <img src="hiwm.png" alt="Hi-WM overview figure" style="width: 80%;display: block"/>-->
+<!--            <figcaption>-->
+<!--              Hi-WM overview. A policy is rolled out in a learned world model. When the rollout becomes failure-prone, a human provides short corrective actions. Cached states support rollback and branching, producing multiple continuations for post-training.-->
+<!--            </figcaption>-->
+<!--          </figure>-->
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <img src="hiwm.png" alt="Hi-WM overview figure" style="width: 80%; display: block;">
+            <p style="text-align: left;">
+              Hi-WM overview. A policy is rolled out in a learned world model. When the rollout becomes failure-prone, a human provides short corrective actions. Cached states support rollback and branching, producing multiple continuations for post-training.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<!-- ── Top bar ── -->
-<div id="topbar">
-  <label>YAM Push-T</label>
+    <section class="section section-muted">
+      <div class="container narrow">
+        <div class="section-head">
+          <h2>Abstract</h2>
+          <p>Human-in-the-World-Model for scalable robot post-training.</p>
+        </div>
+        <div class="paper-card abstract-text">
+          <p>
+            Post-training is essential for turning pretrained generalist robot policies into reliable task-specific controllers, but existing human-in-the-loop pipelines remain tied to physical execution: each correction requires robot time, scene setup, resets, and operator supervision in the real world. Meanwhile, action-conditioned world models have been studied mainly for imagination, synthetic data generation, and policy evaluation. We propose <span class="placeholder">Human-in-the-World-Model (Hi-WM)</span>, a post-training framework that uses a learned world model as a reusable corrective substrate for failure-targeted policy improvement. A policy is first rolled out in closed loop inside the world model; when the rollout becomes incorrect or failure-prone, a human intervenes directly in the model to provide short corrective actions.
+          </p>
+          <p>
+            Hi-WM caches intermediate states and supports rollback and branching, allowing a single failure state to be reused for multiple corrective continuations and yielding dense supervision around behaviors that the base policy handles poorly. The resulting corrective trajectories are then added back to the training set for post-training. We evaluate Hi-WM on three real-world manipulation tasks spanning both rigid and deformable object interaction, and on two policy backbones. Hi-WM improves real-world success by 37.9 points on average over the base policy and by 19.0 points over a world-model closed-loop baseline, while world-model evaluation correlates strongly with real-world performance (r = 0.953). These results suggest that world models can serve not only as generators or evaluators, but also as effective corrective substrates for scalable robot post-training.
+          </p>
+        </div>
+      </div>
+    </section>
 
-  <div class="sep"></div>
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>Online Interaction</h2>
+          <p>
+            The interactive demo is now embedded directly in the paper page instead of living as a standalone full-screen app. Desktop keyboard input is recommended for control.
+          </p>
+        </div>
 
-  <button class="btn btn-primary" id="btnConnect">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    Connect
-  </button>
+        <div class="demo-shell">
+          <div class="demo-toolbar">
+            <div class="demo-toolbar-main">
+              <div class="demo-chip">Interactive Demo</div>
+              <div class="demo-title">
+                <strong>Hi-WM World Model Playground</strong>
+                <span id="demo-caption">Connect to the deployed environment and interact in-page.</span>
+              </div>
+            </div>
+            <div class="demo-toolbar-actions">
+              <button class="btn btn-primary" id="btnConnect" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                  <path d="M5 12h14M12 5l7 7-7 7"></path>
+                </svg>
+                <span>Connect</span>
+              </button>
+              <button class="btn btn-gray" id="btnReset" type="button" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
+                </svg>
+                <span>Reset</span>
+              </button>
+              <div class="status-wrap">
+                <div id="status-dot"></div>
+                <span id="status-text">Disconnected</span>
+              </div>
+              <div class="latency-wrap">
+                <span>Latency</span>
+                <span id="latency">-</span>
+                <span>ms</span>
+              </div>
+            </div>
+          </div>
 
-  <button class="btn btn-gray" id="btnReset" disabled>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-    Reset
-  </button>
+          <div class="demo-body">
+            <aside class="arm-panel">
+              <div class="arm-label">Left Arm</div>
+              <div class="key-grid" aria-hidden="true">
+                <div class="key" id="kQ">Q</div>
+                <div class="key" id="kW">W</div>
+                <div class="key" id="kE">E</div>
+                <div class="key" id="kA">A</div>
+                <div class="key" id="kS">S</div>
+                <div class="key" id="kD">D</div>
+              </div>
+              <div class="arm-hint" id="hintLeft"></div>
+            </aside>
 
-  <div id="status-wrap">
-    <div id="status-dot"></div>
-    <span id="status-text">Disconnected</span>
-  </div>
+            <section class="viewport-panel">
+              <div id="canvas-wrap">
+                <canvas id="view" width="512" height="512"></canvas>
+                <div id="overlay">
+                  <div id="overlay-title">PUSHT (TOP-DOWN)</div>
+                  <div id="overlay-sub">Click Connect to start</div>
+                  <div id="overlay-hint">AD: X-axis, WS: Y-axis | JL: X-axis, IK: Y-axis</div>
+                </div>
+              </div>
+              <div class="demo-footnote">
+                <div class="demo-footnote-card">
+                  <strong>Controls</strong>
+                  <p>Use keyboard input after the websocket connection is established. The highlighted keys reflect the current control state.</p>
+                </div>
+                <div class="demo-footnote-card">
+                  <strong>Embed-Friendly Layout</strong>
+                  <p>This section is sized for a paper page, so you can keep title, abstract, figures, and BibTeX in the same site without a separate demo entry point.</p>
+                </div>
+              </div>
+            </section>
 
-  <div id="latency-wrap">LATENCY <span id="latency">—</span> ms</div>
-</div>
+            <aside class="arm-panel">
+              <div class="arm-label">Right Arm</div>
+              <div class="key-grid" aria-hidden="true">
+                <div class="key" id="kU">U</div>
+                <div class="key" id="kI">I</div>
+                <div class="key" id="kO">O</div>
+                <div class="key" id="kJ">J</div>
+                <div class="key" id="kK">K</div>
+                <div class="key" id="kL">L</div>
+              </div>
+              <div class="arm-hint" id="hintRight"></div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<!-- ── Main ── -->
-<div id="main">
+<!--    <section class="section section-muted">-->
+<!--      <div class="container narrow">-->
+<!--        <div class="section-head">-->
+<!--          <h2>More Sections</h2>-->
+<!--          <p>Leave these blocks as placeholders for method figures, experiments, or contribution summaries.</p>-->
+<!--        </div>-->
+<!--        <div class="info-grid">-->
+<!--          <div class="paper-card info-card">-->
+<!--            <h3>Method Overview</h3>-->
+<!--            <p>-->
+<!--              Hi-WM rolls out a policy inside a learned world model and lets a human intervene only when the rollout becomes failure-prone. Cached model states support rollback and branching, so a single failure state can yield multiple corrective continuations for efficient post-training.-->
+<!--            </p>-->
+<!--          </div>-->
+<!--          <div class="paper-card info-card">-->
+<!--            <h3>Project Notes</h3>-->
+<!--            <ul>-->
+<!--              <li>The hero teaser image now uses the local file <code>hiwm.png</code> in the site root.</li>-->
+<!--              <li>The current page already uses the paper title, author list, affiliations, abstract, and arXiv links from the LaTeX source.</li>-->
+<!--              <li>No teaser video is included.</li>-->
+<!--            </ul>-->
+<!--          </div>-->
+<!--        </div>-->
+<!--      </div>-->
+<!--    </section>-->
 
-  <!-- Left arm keys: Q W E / A S D -->
-  <div class="arm-panel">
-    <div class="arm-label">Left Arm</div>
-    <div class="key-grid">
-      <div class="key" id="kQ">Q</div>
-      <div class="key" id="kW">W</div>
-      <div class="key" id="kE">E</div>
-      <div class="key" id="kA">A</div>
-      <div class="key" id="kS">S</div>
-      <div class="key" id="kD">D</div>
-    </div>
-    <div class="arm-hint" id="hintLeft"></div>
-  </div>
+    <section class="section">
+      <div class="container narrow">
+        <div class="section-head">
+          <h2>BibTeX</h2>
+          <p>Reference entry for the current arXiv version.</p>
+        </div>
+        <div class="paper-card">
+          <pre><code>@article{li2026hiwm,
+  title   = {Hi-WM: Human-in-the-World-Model for Scalable Robot Post-Training},
+  author  = {Yaxuan Li and Zhongyi Zhou and Yefei Chen and Yanjiang Guo and Jiaming Liu and Shanghang Zhang and Jianyu Chen and Yichen Zhu},
+  journal = {arXiv preprint arXiv:2604.21741},
+  year    = {2026},
+  url     = {http://arxiv.org/abs/2604.21741}
+}</code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
 
-  <!-- Canvas -->
-  <div id="canvas-wrap">
-    <canvas id="view" width="512" height="512"></canvas>
-    <div id="overlay">
-      <div id="overlay-title">PUSHT (TOP-DOWN)</div>
-      <div id="overlay-sub">Click Connect to start</div>
-      <div id="overlay-hint">AD: X-axis, WS: Y-axis &nbsp;|&nbsp; JL: X-axis, IK: Y-axis</div>
-    </div>
-  </div>
+<!--  <footer>-->
+<!--    <div class="container narrow">-->
+<!--      <div class="hero-card footer-card">-->
+<!--        This page adopts an academic project-page structure inspired by ChatVLA, while keeping the interactive world-model demo embedded directly in the main paper page.-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </footer>-->
 
-  <!-- Right arm keys: U I O / J K L -->
-  <div class="arm-panel">
-    <div class="arm-label">Right Arm</div>
-    <div class="key-grid">
-      <div class="key" id="kU">U</div>
-      <div class="key" id="kI">I</div>
-      <div class="key" id="kO">O</div>
-      <div class="key" id="kJ">J</div>
-      <div class="key" id="kK">K</div>
-      <div class="key" id="kL">L</div>
-    </div>
-    <div class="arm-hint" id="hintRight"></div>
-  </div>
-
-</div>
-
-<script>
-  const TASK = 'yam_push_t_xy';
-  const META = {
-    title:     "YAM PUSH-T XY",
-    leftKeys:  ['w','a','s','d'],
-    rightKeys: ['i','j','k','l'],
-    hintLeft:  "AD: X  WS: Y",
-    hintRight: "JL: X  IK: Y",
-    hint:      "WASD: left XY | IJKL: right XY",
-  };
-
-  // ── DOM refs ──
-  const canvas       = document.getElementById('view');
-  const ctx          = canvas.getContext('2d');
-  const overlay      = document.getElementById('overlay');
-  const overlayTitle = document.getElementById('overlay-title');
-  const overlaySub   = document.getElementById('overlay-sub');
-  const overlayHint  = document.getElementById('overlay-hint');
-  const statusDot    = document.getElementById('status-dot');
-  const statusText   = document.getElementById('status-text');
-  const latencyEl    = document.getElementById('latency');
-  const btnConnect   = document.getElementById('btnConnect');
-  const btnReset     = document.getElementById('btnReset');
-  const hintLeft     = document.getElementById('hintLeft');
-  const hintRight    = document.getElementById('hintRight');
-
-  let ws = null;
-  let hasFrame = false;
-  let lastSendMs = 0;
-
-  // ── Key setup ──
-  const ALL_KEYS = ['q','w','e','a','s','d','u','i','o','j','k','l'];
-  const KEY_ELS = {};
-  ALL_KEYS.forEach(k => { KEY_ELS[k] = document.getElementById('k' + k.toUpperCase()); });
-
-  const KEY_MAP = {
-    KeyQ:'q', KeyW:'w', KeyE:'e', KeyA:'a', KeyS:'s', KeyD:'d',
-    KeyU:'u', KeyI:'i', KeyO:'o', KeyJ:'j', KeyK:'k', KeyL:'l',
-  };
-  const keyState = {};
-
-  // Dim keys not used by this task
-  const activeKeys = new Set([...META.leftKeys, ...META.rightKeys]);
-  ALL_KEYS.forEach(k => {
-    if (!activeKeys.has(k) && KEY_ELS[k]) KEY_ELS[k].classList.add('dim');
-  });
-  hintLeft.textContent  = META.hintLeft;
-  hintRight.textContent = META.hintRight;
-  overlayTitle.textContent = META.title;
-  overlayHint.textContent  = META.hint;
-
-  window.addEventListener('keydown', e => {
-    const k = KEY_MAP[e.code];
-    if (!k) return;
-    e.preventDefault();
-    keyState[k] = 1;
-    if (KEY_ELS[k]) KEY_ELS[k].classList.add('pressed');
-  });
-  window.addEventListener('keyup', e => {
-    const k = KEY_MAP[e.code];
-    if (!k) return;
-    e.preventDefault();
-    keyState[k] = 0;
-    if (KEY_ELS[k]) KEY_ELS[k].classList.remove('pressed');
-  });
-
-  // ── UI helpers ──
-  function setStatus(connected) {
-    statusDot.className    = connected ? 'connected' : '';
-    statusText.textContent = connected ? 'Connected' : 'Disconnected';
-    canvas.className       = connected ? 'connected' : '';
-    btnReset.disabled      = !connected;
-  }
-
-  // ── WebSocket ──
-  function connect(url) {
-    if (ws) { ws.close(); ws = null; }
-    overlaySub.textContent = 'Connecting…';
-    ws = new WebSocket(url);
-    ws.binaryType = 'arraybuffer';
-
-    ws.onopen = () => {
-      setStatus(true);
-      hasFrame = false;
-      overlaySub.textContent = 'Press keys to start';
-      send({ type: 'init', task: TASK });
+  <script>
+    const TASK = "yam_push_t_xy";
+    const META = {
+      title: "YAM PUSH-T XY",
+      leftKeys: ["w", "a", "s", "d"],
+      rightKeys: ["i", "j", "k", "l"],
+      hintLeft: "AD: X  WS: Y",
+      hintRight: "JL: X  IK: Y",
+      hint: "WASD: left XY | IJKL: right XY",
+      caption: "Keyboard control is embedded directly in the publication page."
     };
 
-    ws.onmessage = async event => {
-      if (lastSendMs > 0) {
-        latencyEl.textContent = String(Date.now() - lastSendMs);
-      }
-      try {
-        const imgData = event.data.slice(8);
-        const blob   = new Blob([imgData], { type: 'image/png' });
-        const bitmap = await createImageBitmap(blob);
-        ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-        if (!hasFrame) { hasFrame = true; overlay.classList.add('hidden'); }
-      } catch (_) {}
+    const canvas = document.getElementById("view");
+    const ctx = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+    const overlayTitle = document.getElementById("overlay-title");
+    const overlaySub = document.getElementById("overlay-sub");
+    const overlayHint = document.getElementById("overlay-hint");
+    const statusDot = document.getElementById("status-dot");
+    const statusText = document.getElementById("status-text");
+    const latencyEl = document.getElementById("latency");
+    const btnConnect = document.getElementById("btnConnect");
+    const btnReset = document.getElementById("btnReset");
+    const hintLeft = document.getElementById("hintLeft");
+    const hintRight = document.getElementById("hintRight");
+    const demoCaption = document.getElementById("demo-caption");
+
+    let ws = null;
+    let hasFrame = false;
+    let lastSendMs = 0;
+    let lastActionJson = null;
+
+    const ALL_KEYS = ["q", "w", "e", "a", "s", "d", "u", "i", "o", "j", "k", "l"];
+    const ACTION_KEYS = ["w", "a", "s", "d", "q", "e", "i", "j", "k", "l", "u", "o"];
+    const KEY_ELS = {};
+    const KEY_MAP = {
+      KeyQ: "q",
+      KeyW: "w",
+      KeyE: "e",
+      KeyA: "a",
+      KeyS: "s",
+      KeyD: "d",
+      KeyU: "u",
+      KeyI: "i",
+      KeyO: "o",
+      KeyJ: "j",
+      KeyK: "k",
+      KeyL: "l"
     };
+    const keyState = {};
 
-    ws.onerror = () => {
-      setStatus(false);
-      overlaySub.textContent = 'Connection error. Try again.';
-    };
-
-    ws.onclose = event => {
-      setStatus(false);
-      if (!hasFrame) {
-        overlaySub.textContent = event.reason || 'Disconnected. Click Connect to retry.';
-      }
-    };
-  }
-
-  function send(msg) {
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-  }
-
-  function buildDefaultWsUrl() {
-    return 'wss://hi-worldmodel.ngrok.dev/ws';
-  }
-
-  btnConnect.addEventListener('click', () => {
-    connect(buildDefaultWsUrl());
-  });
-
-  btnReset.addEventListener('click', () => {
-    hasFrame = false;
-    overlay.classList.remove('hidden');
-    overlaySub.textContent = 'Press keys to start';
-    send({ type: 'set_task', task: TASK });
-  });
-
-  // ── Input loop (20 Hz) ──
-  let lastActionJson = null;
-  setInterval(() => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    const action = {};
-    for (const k of ['w','a','s','d','q','e','i','j','k','l','u','o'])
-      action[k] = keyState[k] || 0;
-    const msg = JSON.stringify({ type: 'action', action, t_client: performance.now() });
-    if (msg !== lastActionJson) {
-      lastSendMs = Date.now();
-      ws.send(msg);
-      lastActionJson = msg;
+    function updateStaticDemoText() {
+      const activeKeys = new Set([...META.leftKeys, ...META.rightKeys]);
+      ALL_KEYS.forEach((key) => {
+        KEY_ELS[key] = document.getElementById("k" + key.toUpperCase());
+        if (!KEY_ELS[key]) return;
+        if (!activeKeys.has(key)) {
+          KEY_ELS[key].classList.add("dim");
+        }
+      });
+      hintLeft.textContent = META.hintLeft;
+      hintRight.textContent = META.hintRight;
+      overlayTitle.textContent = META.title;
+      overlayHint.textContent = META.hint;
+      demoCaption.textContent = META.caption;
     }
-  }, 50);
-</script>
+
+    function setStatus(connected) {
+      statusDot.className = connected ? "connected" : "";
+      statusText.textContent = connected ? "Connected" : "Disconnected";
+      btnReset.disabled = !connected;
+      if (!connected) {
+        latencyEl.textContent = "-";
+      }
+    }
+
+    function send(msg) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(msg));
+      }
+    }
+
+    function buildDefaultWsUrl() {
+      return "wss://hi-worldmodel.ngrok.dev/ws";
+    }
+
+    function clearCanvas() {
+      ctx.fillStyle = "#05070d";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function releaseAllKeys() {
+      ALL_KEYS.forEach((key) => {
+        keyState[key] = 0;
+        if (KEY_ELS[key]) {
+          KEY_ELS[key].classList.remove("pressed");
+        }
+      });
+      lastActionJson = null;
+      send({ type: "action", action: Object.fromEntries(ACTION_KEYS.map((key) => [key, 0])), t_client: performance.now() });
+    }
+
+    function connect(url) {
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+
+      hasFrame = false;
+      clearCanvas();
+      overlay.classList.remove("hidden");
+      overlaySub.textContent = "Connecting...";
+      ws = new WebSocket(url);
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = () => {
+        setStatus(true);
+        overlaySub.textContent = "Press keys to start";
+        send({ type: "init", task: TASK });
+      };
+
+      ws.onmessage = async (event) => {
+        if (lastSendMs > 0) {
+          latencyEl.textContent = String(Date.now() - lastSendMs);
+        }
+
+        try {
+          const imgData = event.data.slice(8);
+          const blob = new Blob([imgData], { type: "image/png" });
+          const bitmap = await createImageBitmap(blob);
+          ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          if (!hasFrame) {
+            hasFrame = true;
+            overlay.classList.add("hidden");
+          }
+        } catch (_) {
+        }
+      };
+
+      ws.onerror = () => {
+        setStatus(false);
+        overlaySub.textContent = "Connection error. Try again.";
+      };
+
+      ws.onclose = (event) => {
+        setStatus(false);
+        releaseAllKeys();
+        ws = null;
+        if (!hasFrame) {
+          overlaySub.textContent = event.reason || "Disconnected. Click Connect to retry.";
+        }
+      };
+    }
+
+    window.addEventListener("keydown", (event) => {
+      const key = KEY_MAP[event.code];
+      if (!key) return;
+      event.preventDefault();
+      keyState[key] = 1;
+      if (KEY_ELS[key]) {
+        KEY_ELS[key].classList.add("pressed");
+      }
+    });
+
+    window.addEventListener("keyup", (event) => {
+      const key = KEY_MAP[event.code];
+      if (!key) return;
+      event.preventDefault();
+      keyState[key] = 0;
+      if (KEY_ELS[key]) {
+        KEY_ELS[key].classList.remove("pressed");
+      }
+    });
+
+    window.addEventListener("blur", releaseAllKeys);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        releaseAllKeys();
+      }
+    });
+
+    btnConnect.addEventListener("click", () => {
+      connect(buildDefaultWsUrl());
+    });
+
+    btnReset.addEventListener("click", () => {
+      hasFrame = false;
+      clearCanvas();
+      overlay.classList.remove("hidden");
+      overlaySub.textContent = "Press keys to start";
+      releaseAllKeys();
+      send({ type: "set_task", task: TASK });
+    });
+
+    updateStaticDemoText();
+    clearCanvas();
+    setStatus(false);
+
+    setInterval(() => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+      const action = {};
+      ACTION_KEYS.forEach((key) => {
+        action[key] = keyState[key] || 0;
+      });
+
+      const msg = JSON.stringify({
+        type: "action",
+        action,
+        t_client: performance.now()
+      });
+
+      if (msg !== lastActionJson) {
+        lastSendMs = Date.now();
+        ws.send(msg);
+        lastActionJson = msg;
+      }
+    }, 50);
+  </script>
 </body>
 </html>
